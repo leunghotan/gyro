@@ -13,11 +13,16 @@
             -webkit-user-select: none;
             touch-action: manipulation;
         }
-        body {
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100dvh;
+            max-height: 100dvh;
+            overflow: hidden;
             font-family: 'Noto Sans TC', sans-serif;
             background: radial-gradient(circle at 50% 20%, #2e1065 0%, #0f172a 75%, #020617 100%);
             color: #f8fafc;
-            overflow-x: hidden;
         }
         /* 霓虹燈招牌效果 */
         .neon-text {
@@ -28,35 +33,35 @@
         }
         .arcade-cabinet {
             background: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%);
-            border: 4px solid #f472b6;
-            box-shadow: 0 0 25px rgba(244, 114, 182, 0.45), inset 0 0 20px rgba(0,0,0,0.8);
+            border: 2.5px solid #f472b6;
+            box-shadow: 0 0 14px rgba(244, 114, 182, 0.38), inset 0 0 15px rgba(0,0,0,0.8);
         }
         /* 街機大掣立體樣式 */
         .btn-drop {
             background: radial-gradient(circle at 35% 30%, #ff4d6d, #e11d48 60%, #9f1239 100%);
-            box-shadow: 0 8px 0 #881337, 0 12px 25px rgba(225, 29, 72, 0.65), inset 0 2px 6px rgba(255,255,255,0.6);
+            box-shadow: 0 5px 0 #881337, 0 8px 18px rgba(225, 29, 72, 0.65), inset 0 2px 5px rgba(255,255,255,0.6);
             transition: all 0.08s ease;
         }
         .btn-drop:active:not(:disabled) {
-            transform: translateY(6px);
-            box-shadow: 0 2px 0 #881337, 0 4px 10px rgba(225, 29, 72, 0.5), inset 0 2px 4px rgba(255,255,255,0.4);
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 #881337, 0 3px 8px rgba(225, 29, 72, 0.5), inset 0 2px 4px rgba(255,255,255,0.4);
         }
         .btn-drop:disabled {
             background: linear-gradient(180deg, #475569, #334155);
-            box-shadow: 0 6px 0 #1e293b;
+            box-shadow: 0 4px 0 #1e293b;
             opacity: 0.65;
             cursor: not-allowed;
         }
         /* 方向鍵按鈕 */
         .dpad-btn {
             background: linear-gradient(180deg, #334155 0%, #1e293b 100%);
-            border: 2px solid #475569;
-            box-shadow: 0 4px 0 #0f172a;
+            border: 1.5px solid #475569;
+            box-shadow: 0 2px 0 #0f172a;
             transition: transform 0.06s ease;
         }
         .dpad-btn:active, .dpad-btn.active {
-            transform: translateY(3px);
-            box-shadow: 0 1px 0 #0f172a;
+            transform: translateY(2px);
+            box-shadow: 0 0px 0 #0f172a;
             border-color: #38bdf8;
             background: #0284c7;
         }
@@ -65,185 +70,175 @@
             width: 100%;
             height: 100%;
         }
-        @keyframes pulse-fast {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.04); }
-        }
-        .animate-pulse-fast {
-            animation: pulse-fast 1.2s infinite ease-in-out;
-        }
         /* 虛擬搖桿觸控防止畫面捲動 */
         .touch-none-zone {
             touch-action: none;
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-between p-2 sm:p-4">
+<body class="w-full h-[100dvh] max-h-[100dvh] overflow-hidden flex flex-col items-center justify-start gap-[6px] px-2 py-[6px]">
 
-    <!-- 頂部街機燈箱 Header -->
-    <header class="w-full max-w-lg arcade-cabinet rounded-2xl p-2.5 sm:p-3 mb-2">
-        <div class="flex items-center justify-between gap-2">
-            <div class="flex items-center gap-2">
-                <span class="text-2xl sm:text-3xl">🕹️</span>
-                <div>
-                    <h1 class="text-lg sm:text-xl font-black tracking-wider text-pink-400 neon-text leading-tight">旺角夾公仔皇</h1>
-                    <p class="text-[11px] text-cyan-300 font-medium">2.5D 陀螺儀體感街機</p>
+    <!-- 1. 頂部超緊湊街機燈箱 Header (flex-shrink-0) -->
+    <header class="w-full max-w-lg arcade-cabinet rounded-xl px-2.5 py-1.5 flex-shrink-0">
+        <div class="flex items-center justify-between gap-1.5">
+            <div class="flex items-center gap-1.5 min-w-0">
+                <span class="text-xl leading-none">🕹️</span>
+                <div class="truncate">
+                    <h1 class="text-sm sm:text-base font-black tracking-wide text-pink-400 neon-text leading-tight truncate">旺角夾公仔皇</h1>
+                    <p class="text-[9px] text-cyan-300 font-medium leading-tight">2.5D 陀螺儀體感街機</p>
                 </div>
             </div>
 
-            <!-- 數據面板：銀仔 & 分數 -->
-            <div class="flex items-center gap-2">
-                <div class="bg-slate-900/90 border border-amber-500/50 rounded-xl px-2.5 py-1 text-center">
-                    <div class="text-[10px] text-amber-300 font-bold">銀仔 (COINS)</div>
-                    <div class="flex items-center gap-1 justify-center">
-                        <span id="coinCount" class="text-base sm:text-lg font-black text-amber-400">5</span>
-                        <button id="insertCoinBtn" class="ml-1 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 text-[11px] font-black px-1.5 py-0.5 rounded shadow">
+            <!-- 數據面板：銀仔 & 分數 & 音效 -->
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+                <div class="bg-slate-900/90 border border-amber-500/50 rounded-lg px-2 py-0.5 text-center">
+                    <div class="text-[8px] text-amber-300 font-bold leading-none">銀仔 (COINS)</div>
+                    <div class="flex items-center gap-1 justify-center mt-0.5">
+                        <span id="coinCount" class="text-xs sm:text-sm font-black text-amber-400 leading-none">5</span>
+                        <button id="insertCoinBtn" class="bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 text-[10px] font-black px-1.5 py-0.5 rounded shadow leading-none">
                             +入銀仔
                         </button>
                     </div>
                 </div>
-                <div class="bg-slate-900/90 border border-cyan-500/50 rounded-xl px-2.5 py-1 text-center">
-                    <div class="text-[10px] text-cyan-300 font-bold">總分 (SCORE)</div>
-                    <div id="scoreCount" class="text-base sm:text-lg font-black text-cyan-400">0</div>
+                <div class="bg-slate-900/90 border border-cyan-500/50 rounded-lg px-2 py-0.5 text-center min-w-[54px]">
+                    <div class="text-[8px] text-cyan-300 font-bold leading-none">總分 (SCORE)</div>
+                    <div id="scoreCount" class="text-xs sm:text-sm font-black text-cyan-400 leading-none mt-0.5">0</div>
                 </div>
-                <button id="soundToggleBtn" title="音效開關" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl p-2 text-lg">
+                <button id="soundToggleBtn" title="音效開關" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg px-2 py-1 text-sm leading-none">
                     🔊
                 </button>
             </div>
         </div>
 
         <!-- 陀螺儀狀態及校準控制列 -->
-        <div class="mt-2 pt-2 border-t border-slate-700/80 flex flex-wrap items-center justify-between gap-1.5">
-            <div class="flex items-center gap-1.5">
-                <span id="gyroStatusDot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
-                <span id="gyroStatusText" class="text-xs font-bold text-slate-300">未啟用陀螺儀 (支援搖桿/觸控)</span>
+        <div class="mt-1 pt-1 border-t border-slate-700/80 flex items-center justify-between gap-1">
+            <div class="flex items-center gap-1 min-w-0 truncate">
+                <span id="gyroStatusDot" class="w-2 h-2 rounded-full bg-amber-400 animate-ping flex-shrink-0"></span>
+                <span id="gyroStatusText" class="text-[10px] font-bold text-slate-300 truncate">未啟用陀螺儀 (支援搖桿/觸控)</span>
             </div>
-            <div class="flex items-center gap-1.5 flex-wrap">
-                <button id="enableGyroBtn" class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 active:scale-95 text-white text-xs font-black px-2.5 py-1.5 rounded-lg shadow-md flex items-center gap-1">
+            <div class="flex items-center gap-1 flex-shrink-0">
+                <button id="enableGyroBtn" class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 active:scale-95 text-white text-[10px] font-black px-2 py-1 rounded-md shadow flex items-center gap-0.5 leading-none">
                     <span>📱</span> 啟用陀螺儀
                 </button>
-                <button id="calibrateBtn" class="bg-slate-800 hover:bg-slate-700 active:scale-95 border border-cyan-400/50 text-cyan-300 text-xs font-bold px-2 py-1.5 rounded-lg">
+                <button id="calibrateBtn" class="bg-slate-800 hover:bg-slate-700 active:scale-95 border border-cyan-400/50 text-cyan-300 text-[10px] font-bold px-1.5 py-1 rounded-md leading-none">
                     🎯 校準
                 </button>
-                <button id="toggleDiagBtn" class="bg-slate-800 hover:bg-slate-700 active:scale-95 border border-amber-400/50 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg flex items-center gap-1">
+                <button id="toggleDiagBtn" class="bg-slate-800 hover:bg-slate-700 active:scale-95 border border-amber-400/50 text-amber-300 text-[10px] font-bold px-1.5 py-1 rounded-md flex items-center gap-0.5 leading-none">
                     <span>🔍</span> 診斷
                 </button>
-                <button id="refillBtn" class="bg-slate-800 hover:bg-slate-700 active:scale-95 border border-pink-400/40 text-pink-300 text-xs font-bold px-2 py-1.5 rounded-lg" title="補滿公仔">
+                <button id="refillBtn" class="bg-slate-800 hover:bg-slate-700 active:scale-95 border border-pink-400/40 text-pink-300 text-[10px] font-bold px-1.5 py-1 rounded-md leading-none" title="補滿公仔">
                     🔄 補貨
                 </button>
             </div>
         </div>
 
         <!-- 🔍 可摺疊陀螺儀診斷面板 (Sensor Diagnostics Bar) -->
-        <div id="diagPanel" class="hidden mt-2 pt-2 border-t border-slate-700/80 bg-slate-950/90 rounded-xl p-2.5 text-[11px] font-mono text-slate-300">
-            <div class="flex items-center justify-between mb-1.5">
-                <span class="font-bold text-amber-300 flex items-center gap-1">🔍 陀螺儀感應器診斷面板 (Sensor Status)</span>
-                <button id="openGuideModalBtn" class="text-[10px] bg-pink-600 hover:bg-pink-500 text-white font-sans font-bold px-2 py-0.5 rounded">
-                    點解用唔到？解決方法
+        <div id="diagPanel" class="hidden mt-1.5 pt-1.5 border-t border-slate-700/80 bg-slate-950/95 rounded-lg p-2 text-[10px] font-mono text-slate-300">
+            <div class="flex items-center justify-between mb-1">
+                <span class="font-bold text-amber-300 flex items-center gap-1">🔍 陀螺儀感應器診斷 (Sensor Status)</span>
+                <button id="openGuideModalBtn" class="text-[9px] bg-pink-600 hover:bg-pink-500 text-white font-sans font-bold px-1.5 py-0.5 rounded">
+                    解決方法
                 </button>
             </div>
-            <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+            <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[9px]">
                 <div>Secure Context (HTTPS): <span id="diagSecure" class="font-bold">--</span></div>
                 <div>In Sandboxed Iframe: <span id="diagIframe" class="font-bold">--</span></div>
                 <div>Orientation API: <span id="diagOrientAPI" class="font-bold">--</span></div>
                 <div>Motion Gravity API: <span id="diagMotionAPI" class="font-bold">--</span></div>
                 <div>iOS Permission API: <span id="diagPermAPI" class="font-bold">--</span></div>
                 <div>Active Source: <span id="diagSource" class="font-bold text-cyan-300">None</span></div>
-                <div class="col-span-2 text-emerald-300 bg-slate-900 px-2 py-1 rounded border border-slate-800 mt-0.5">
+                <div class="col-span-2 text-emerald-300 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800 mt-0.5 truncate">
                     Raw Data: <span id="diagRawValues">β: null | γ: null | accX: null | accY: null</span>
                 </div>
             </div>
         </div>
     </header>
 
-    <!-- 主機台廚窗 Canvas 區域 -->
-    <main class="w-full max-w-lg flex-1 flex flex-col items-center justify-center relative min-h-[340px] sm:min-h-[410px]">
-        <div class="w-full h-full arcade-cabinet rounded-2xl overflow-hidden relative flex flex-col">
-            <!-- 機頂跑馬燈提示 -->
-            <div id="statusBanner" class="bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 text-white text-xs sm:text-sm font-black py-1 px-3 text-center tracking-wide shadow-md z-10 flex items-center justify-between">
-                <span id="bannerMsg" class="truncate mr-2">💡 側側部電話或拖曳左下角搖桿瞄準公仔，撳「落爪」！</span>
-                <span id="accuracyBadge" class="bg-black/40 px-2 py-0.5 rounded text-[11px] text-amber-300 font-mono flex-shrink-0">X:50 Y:50</span>
-            </div>
+    <!-- 2. 主機台櫥窗 Canvas 區域 (flex-1 min-h-0 自動填滿中間空間，唔會推走下面控制面板) -->
+    <main class="w-full max-w-lg flex-1 min-h-0 flex flex-col arcade-cabinet rounded-xl overflow-hidden relative">
+        <!-- 機頂跑馬燈提示 -->
+        <div id="statusBanner" class="bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 text-white text-[11px] font-black py-1 px-2.5 text-center tracking-wide shadow z-10 flex items-center justify-between flex-shrink-0">
+            <span id="bannerMsg" class="truncate mr-2">💡 側側部電話或拖曳左下角搖桿瞄準公仔，撳「落爪」！</span>
+            <span id="accuracyBadge" class="bg-black/40 px-1.5 py-0.5 rounded text-[10px] text-amber-300 font-mono flex-shrink-0">X:54 Y:50</span>
+        </div>
 
-            <!-- 2.5D 遊戲畫布 (支援直接手指滑動瞄準) -->
-            <div id="canvasTouchZone" class="relative flex-1 w-full bg-slate-950 touch-none-zone cursor-crosshair" style="min-height: 320px;" title="可直接喺畫面拖曳移動爪頭">
-                <canvas id="clawCanvas"></canvas>
+        <!-- 2.5D 遊戲畫布 (支援直接手指滑動瞄準) -->
+        <div id="canvasTouchZone" class="relative flex-1 min-h-0 w-full bg-slate-950 touch-none-zone cursor-crosshair" title="可直接喺畫面拖曳移動爪頭">
+            <canvas id="clawCanvas"></canvas>
 
-                <!-- 浮動訊息 Toast -->
-                <div id="toastOverlay" class="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 z-20">
-                    <div id="toastBox" class="bg-slate-900/95 border-2 border-amber-400 text-amber-300 px-5 py-3 rounded-2xl shadow-2xl text-center transform scale-95 transition-transform duration-300 max-w-[85%]">
-                        <div id="toastEmoji" class="text-4xl mb-1">🎉</div>
-                        <div id="toastTitle" class="text-lg font-black">夾中公仔！</div>
-                        <div id="toastSub" class="text-xs text-slate-300 mt-0.5">+300 分</div>
-                    </div>
+            <!-- 浮動訊息 Toast -->
+            <div id="toastOverlay" class="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 z-20">
+                <div id="toastBox" class="bg-slate-900/95 border-2 border-amber-400 text-amber-300 px-4 py-2.5 rounded-2xl shadow-2xl text-center transform scale-95 transition-transform duration-300 max-w-[85%]">
+                    <div id="toastEmoji" class="text-3xl mb-0.5">🎉</div>
+                    <div id="toastTitle" class="text-base font-black">夾中公仔！</div>
+                    <div id="toastSub" class="text-[11px] text-slate-300 mt-0.5">+300 分</div>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- 街機控制面板 (陀螺儀水平儀/觸控搖桿 + 大落爪掣 + 虛擬十字掣) -->
-    <section class="w-full max-w-lg arcade-cabinet rounded-2xl p-3 mt-2">
-        <div class="grid grid-cols-12 gap-2 items-center">
+    <!-- 3. 街機控制面板 (緊貼機台下方，只隔 6px，flex-shrink-0) -->
+    <section class="w-full max-w-lg arcade-cabinet rounded-xl px-2.5 py-1.5 flex-shrink-0">
+        <div class="grid grid-cols-12 gap-1.5 items-center">
             
             <!-- 左側：陀螺儀水平氣泡儀 兼 觸控虛擬搖桿 (Bubble Level & Analog Stick) -->
-            <div class="col-span-4 flex flex-col items-center justify-center bg-slate-900/90 border border-slate-700 rounded-xl p-2">
-                <div class="text-[10px] sm:text-[11px] font-bold text-cyan-300 mb-1 flex items-center gap-1 text-center">
-                    <span>🧭 水平儀 / 搖桿</span>
+            <div class="col-span-4 flex flex-col items-center justify-center bg-slate-900/90 border border-slate-700 rounded-lg py-1 px-1">
+                <div class="text-[9px] font-bold text-cyan-300 mb-0.5 text-center leading-tight">
+                    🧭 水平儀 / 搖桿
                 </div>
-                <div id="joystickPad" class="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-slate-950 border-2 border-cyan-500/70 shadow-inner flex items-center justify-center overflow-hidden touch-none-zone cursor-pointer" title="可用手指拖曳當搖桿控制爪頭">
+                <div id="joystickPad" class="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-slate-950 border-2 border-cyan-500/70 shadow-inner flex items-center justify-center overflow-hidden touch-none-zone cursor-pointer" title="可用手指拖曳當搖桿控制爪頭">
                     <!-- 十字準星線 -->
                     <div class="absolute inset-x-0 h-[1px] bg-cyan-500/30 pointer-events-none"></div>
                     <div class="absolute inset-y-0 w-[1px] bg-cyan-500/30 pointer-events-none"></div>
-                    <div class="w-8 h-8 rounded-full border border-cyan-500/40 pointer-events-none"></div>
+                    <div class="w-6 h-6 rounded-full border border-cyan-500/40 pointer-events-none"></div>
                     <!-- 動態水平氣泡 / 搖桿頭 -->
-                    <div id="tiltBubble" class="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-300 to-blue-600 border border-white/70 shadow-[0_0_12px_#22d3ee] absolute pointer-events-none" style="transform: translate(0px, 0px);"></div>
+                    <div id="tiltBubble" class="w-5 h-5 rounded-full bg-gradient-to-br from-cyan-300 to-blue-600 border border-white/70 shadow-[0_0_10px_#22d3ee] absolute pointer-events-none" style="transform: translate(0px, 0px);"></div>
                 </div>
-                <div id="angleReadout" class="text-[10px] font-mono text-slate-400 mt-1 text-center">
-                    可拖曳搖桿或傾側
+                <div id="angleReadout" class="text-[9px] font-mono text-slate-400 mt-0.5 text-center leading-none">
+                    X: 0° | Y: 0°
                 </div>
             </div>
 
             <!-- 中間：超大街機「落爪！」按鈕 -->
             <div class="col-span-4 flex flex-col items-center justify-center">
-                <button id="dropClawBtn" class="btn-drop w-24 h-24 sm:w-28 sm:h-28 rounded-full flex flex-col items-center justify-center text-white border-4 border-pink-300/80 select-none">
-                    <span class="text-2xl sm:text-3xl mb-0.5">🪝</span>
-                    <span class="text-base sm:text-lg font-black tracking-wider leading-none">落爪!</span>
-                    <span class="text-[10px] font-bold text-pink-200 mt-0.5">DROP CLAW</span>
+                <button id="dropClawBtn" class="btn-drop w-[76px] h-[76px] sm:w-22 sm:h-22 rounded-full flex flex-col items-center justify-center text-white border-[3px] border-pink-300/80 select-none">
+                    <span class="text-xl leading-none mb-0.5">🪝</span>
+                    <span class="text-sm font-black tracking-wider leading-none">落爪!</span>
+                    <span class="text-[8px] font-bold text-pink-200 mt-0.5 leading-none">DROP CLAW</span>
                 </button>
-                <span class="text-[10px] text-slate-400 mt-2 font-medium">每次消耗 1 個銀仔</span>
+                <span class="text-[9px] text-slate-400 mt-1 font-medium leading-none">每次消耗 1 銀仔</span>
             </div>
 
             <!-- 右側：虛擬十字掣 (D-Pad 支援電腦/無陀螺儀微調) -->
-            <div class="col-span-4 flex flex-col items-center justify-center bg-slate-900/90 border border-slate-700 rounded-xl p-2">
-                <div class="text-[11px] font-bold text-pink-300 mb-1">🕹️ 手動微調掣</div>
-                <div class="grid grid-cols-3 gap-1 w-24 h-24 sm:w-26 sm:h-26">
+            <div class="col-span-4 flex flex-col items-center justify-center bg-slate-900/90 border border-slate-700 rounded-lg py-1 px-1">
+                <div class="text-[9px] font-bold text-pink-300 mb-0.5 leading-tight">🕹️ 手動微調掣</div>
+                <div class="grid grid-cols-3 gap-1 w-16 h-16 sm:w-20 sm:h-20">
                     <div></div>
-                    <button data-dir="up" class="dpad-btn rounded-lg flex items-center justify-center text-sm font-black text-white" aria-label="向後移">▲</button>
+                    <button data-dir="up" class="dpad-btn rounded flex items-center justify-center text-xs font-black text-white" aria-label="向後移">▲</button>
                     <div></div>
-                    <button data-dir="left" class="dpad-btn rounded-lg flex items-center justify-center text-sm font-black text-white" aria-label="向左移">◀</button>
-                    <div class="bg-slate-950 rounded-lg flex items-center justify-center text-[10px] text-slate-500 font-bold">XY</div>
-                    <button data-dir="right" class="dpad-btn rounded-lg flex items-center justify-center text-sm font-black text-white" aria-label="向右移">▶</button>
+                    <button data-dir="left" class="dpad-btn rounded flex items-center justify-center text-xs font-black text-white" aria-label="向左移">◀</button>
+                    <div class="bg-slate-950 rounded flex items-center justify-center text-[8px] text-slate-500 font-bold">XY</div>
+                    <button data-dir="right" class="dpad-btn rounded flex items-center justify-center text-xs font-black text-white" aria-label="向右移">▶</button>
                     <div></div>
-                    <button data-dir="down" class="dpad-btn rounded-lg flex items-center justify-center text-sm font-black text-white" aria-label="向前移">▼</button>
+                    <button data-dir="down" class="dpad-btn rounded flex items-center justify-center text-xs font-black text-white" aria-label="向前移">▼</button>
                     <div></div>
                 </div>
-                <div class="text-[10px] text-slate-400 mt-1">支援鍵盤 WASD</div>
+                <div class="text-[9px] text-slate-400 mt-0.5 leading-none">支援方向鍵微調</div>
             </div>
 
         </div>
     </section>
 
-    <!-- 底部：戰利品櫃 (Prize Collection Tray) -->
-    <footer class="w-full max-w-lg arcade-cabinet rounded-2xl p-2.5 sm:p-3 mt-2">
-        <div class="flex items-center justify-between mb-1.5">
-            <div class="flex items-center gap-1.5">
-                <span class="text-base">🏆</span>
-                <h2 class="text-xs sm:text-sm font-black text-amber-300">戰利品櫃 (已夾獲 <span id="caughtCount">0</span> 隻)</h2>
+    <!-- 4. 底部：單行橫向戰利品櫃 (Prize Collection Strip - flex-shrink-0) -->
+    <footer class="w-full max-w-lg arcade-cabinet rounded-xl px-2.5 py-1.5 flex-shrink-0">
+        <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1 flex-shrink-0">
+                <span class="text-sm leading-none">🏆</span>
+                <h2 class="text-[11px] font-black text-amber-300 whitespace-nowrap">戰利品 (<span id="caughtCount">0</span>)</h2>
             </div>
-            <span class="text-[11px] text-slate-400">點擊戰利品可睇詳情</span>
-        </div>
-        <div id="prizeTray" class="flex items-center gap-2 overflow-x-auto py-1.5 px-2 bg-slate-950/90 rounded-xl border border-slate-800 min-h-[54px]">
-            <span id="emptyTrayHint" class="text-xs text-slate-500 italic">暫時仲未夾到公仔，快啲落爪試下啦！</span>
+            <div id="prizeTray" class="flex-1 flex items-center gap-1.5 overflow-x-auto py-0.5 px-2 bg-slate-950/90 rounded-lg border border-slate-800 min-h-[34px] max-h-[38px]">
+                <span id="emptyTrayHint" class="text-[10px] text-slate-500 italic whitespace-nowrap">暫時仲未夾到公仔，快啲落爪試下啦！</span>
+            </div>
         </div>
     </footer>
 
@@ -299,12 +294,13 @@
 
     <script>
         /**************************************************************
-         * 1. 街機合成音效引擎 (Web Audio API - 無需外部音訊檔)
+         * 1. 街機合成音效引擎 (Web Audio API + iOS 自動解鎖機制)
          **************************************************************/
         class ArcadeSoundEngine {
             constructor() {
                 this.ctx = null;
                 this.enabled = true;
+                this.unlocked = false;
             }
 
             init() {
@@ -312,8 +308,19 @@
                     const AudioCtx = window.AudioContext || window.webkitAudioContext;
                     if (AudioCtx) this.ctx = new AudioCtx();
                 }
-                if (this.ctx && this.ctx.state === 'suspended') {
-                    this.ctx.resume();
+                if (this.ctx && (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted')) {
+                    this.ctx.resume().catch(() => {});
+                }
+                // iOS Safari 專屬空白音訊解鎖器
+                if (this.ctx && !this.unlocked) {
+                    try {
+                        const buffer = this.ctx.createBuffer(1, 1, 22050);
+                        const source = this.ctx.createBufferSource();
+                        source.buffer = buffer;
+                        source.connect(this.ctx.destination);
+                        if (source.start) source.start(0);
+                        this.unlocked = true;
+                    } catch (e) {}
                 }
             }
 
@@ -367,6 +374,11 @@
         }
 
         const sfx = new ArcadeSoundEngine();
+
+        // 為 iPhone Safari 綁定全局首次觸控自動解鎖 Web Audio
+        ['touchstart', 'touchend', 'click', 'pointerdown'].forEach(evtName => {
+            window.addEventListener(evtName, () => sfx.init(), { once: true, passive: true });
+        });
 
         /**************************************************************
          * 2. 公仔圖鑑設定 (Prizes Catalog)
@@ -1017,13 +1029,11 @@
             if (emptyHint) emptyHint.remove();
 
             const item = document.createElement('button');
-            item.className = 'flex-shrink-0 flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 border border-pink-500/50 rounded-xl px-2.5 py-1 transition transform hover:scale-105';
+            item.className = 'flex-shrink-0 flex items-center gap-1 bg-slate-900 hover:bg-slate-800 border border-pink-500/50 rounded-md px-2 py-0.5 transition transform active:scale-95';
             item.innerHTML = `
-                <span class="text-2xl">${prize.emoji}</span>
-                <div class="text-left">
-                    <div class="text-xs font-black text-white leading-tight">${prize.name}</div>
-                    <div class="text-[10px] font-bold text-amber-400">+${prize.score}分</div>
-                </div>
+                <span class="text-sm leading-none">${prize.emoji}</span>
+                <span class="text-[10px] font-black text-white whitespace-nowrap">${prize.name}</span>
+                <span class="text-[9px] font-bold text-amber-400">+${prize.score}</span>
             `;
             item.addEventListener('click', () => {
                 showToast(prize.emoji, prize.name, `價值 ${prize.score} 分嘅精選戰利品！`);
@@ -1070,7 +1080,7 @@
             if (state.keys.down) inputY = 0.85;
 
             // 更新左下角水平儀 / 搖桿氣泡位置
-            const maxBubbleOffset = 28;
+            const maxBubbleOffset = 20;
             const bx = Math.round(inputX * maxBubbleOffset);
             const by = Math.round(inputY * maxBubbleOffset);
             tiltBubble.style.transform = `translate(${bx}px, ${by}px)`;
