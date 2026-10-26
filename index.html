@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>旺角夾公仔皇 - 陀螺儀街機</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: radial-gradient(circle at 50% 20%, #2e1065 0%, #0f172a 75%, #020617 100%);
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+        /* 霓虹燈招牌效果 */
+        .neon-text {
+            text-shadow: 0 0 8px #ec4899, 0 0 18px #ec4899, 0 0 28px #db2777;
+        }
+        .neon-cyan {
+            text-shadow: 0 0 6px #06b6d4, 0 0 14px #0891b2;
+        }
+        .arcade-cabinet {
+            background: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%);
+            border: 4px solid #f472b6;
+            box-shadow: 0 0 25px rgba(244, 114, 182, 0.45), inset 0 0 20px rgba(0,0,0,0.8);
+        }
+        /* 街機大掣立體樣式 */
+        .btn-drop {
+            background: radial-gradient(circle at 35% 30%, #ff4d6d, #e11d48 60%, #9f1239 100%);
+            box-shadow: 0 8px 0 #881337, 0 12px 25px rgba(225, 29, 72, 0.65), inset 0 2px 6px rgba(255,255,255,0.6);
+            transition: all 0.08s ease;
+        }
+        .btn-drop:active:not(:disabled) {
+            transform: translateY(6px);
+            box-shadow: 0 2px 0 #881337, 0 4px 10px rgba(225, 29, 72, 0.5), inset 0 2px 4px rgba(255,255,255,0.4);
+        }
+        .btn-drop:disabled {
+            background: linear-gradient(180deg, #475569, #334155);
+            box-shadow: 0 6px 0 #1e293b;
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+        /* 方向鍵按鈕 */
+        .dpad-btn {
+            background: linear-gradient(180deg, #334155 0%, #1e293b 100%);
+            border: 2px solid #475569;
+            box-shadow: 0 4px 0 #0f172a;
+            transition: transform 0.06s ease;
+        }
+        .dpad-btn:active, .dpad-btn.active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #0f172a;
+            border-color: #38bdf8;
+            background: #0284c7;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        @keyframes pulse-fast {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.04); }
+        }
+        .animate-pulse-fast {
+            animation: pulse-fast 1.2s infinite ease-in-out;
+        }
+        /* 虛擬搖桿觸控防止畫面捲動 */
+        .touch-none-zone {
+            touch-action: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-2 sm:p-4">
+
+    <!-- 頂部街機燈箱 Header -->
+    <header class="w-full max-w-lg arcade-cabinet rounded-2xl p-2.5 sm:p-3 mb-2">
+        <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+                <span class="text-2xl sm:text-3xl">🕹️</span>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-black tracking-wider text-pink-400 neon-text leading-tight">旺角夾公仔皇</h1>
+                    <p class="text-[11px] text-cyan-300 font-medium">2.5D 陀螺儀體感街機</p>
+                </div>
+            </div>
+
+            <!-- 數據面板：銀仔 & 分數 -->
+            <div class="flex items-center gap-2">
+                <div class="bg-slate-900/90 border border-amber-500/50 rounded-xl px-2.5 py-1 text-center">
+                    <div class="text-[10px] text-amber-300 font-bold">銀仔 (COINS)</div>
+                    <div class="flex items-center gap-1 justify-center">
+                        <span id="coinCount" class="text-base sm:text-lg font-black text-amber-400">5</span>
+                        <button id="insertCoinBtn" class="ml-1 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 text-[11px] font-black px-1.5 py-0.5 rounded shadow">
+                            +入銀仔
+                        </button>
+                    </div>
+                </div>
+                <div class="bg-slate-900/90 border border-cyan-500/50 rounded-xl px-2.5 py-1 text-center">
+                    <div class="text-[10px] text-cyan-300 font-bold">總分 (SCORE)</div>
+                    <div id="scoreCount" class="text-base sm:text-lg font-black text-cyan-400">0</div>
+                </div>
+                <button id="soundToggleBtn" title="音效開關" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl p-2 text-lg">
+                    🔊
+                </button>
+            </div>
+        </div>
+
+        <!-- 陀螺儀狀態及校準控制列 -->
+        <div class="mt-2 pt-2 border-t border-slate-700/80 flex flex-wrap items-center justify-between gap-1.5">
+            <div class="flex items-center gap-1.5">
+                <span id="gyroStatusDot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
+                <span id="gyroStatusText" class="text-xs font-bold text-slate-300">未啟用陀螺儀 (支援搖桿/觸控)</span>
+            </div>
+            <div class="flex items-center gap-1.5 flex-wrap">
+                <button id="enableGyroBtn" class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 active:scale-95 text-white text-xs font-black px-2.5 py-1.5 rounded-lg shadow-md flex items-center gap-1">
+                    <span>📱</span> 啟用陀螺儀
+                </button>
+                <button id="calibrateBtn" class="bg-slate-800 hover:bg-slate-700 active:scale-95 border border-cyan-400/50 text-cyan-300 text-xs font-bold px-2 py-1.5 rounded-lg">
+                    🎯 校準
+                </button>
+                <button id="toggleDiagBtn" class="bg-slate-800 hover:bg-slate-700 active:scale-95 border border-amber-400/50 text-amber-300 text-xs font-bold px-2 py-1.5 rounded-lg flex items-center gap-1">
+                    <span>🔍</span> 診斷
+                </button>
+                <button id="refillBtn" class="bg-slate-800 hover:bg-slate-700 active:scale-95 border border-pink-400/40 text-pink-300 text-xs font-bold px-2 py-1.5 rounded-lg" title="補滿公仔">
+                    🔄 補貨
+                </button>
+            </div>
+        </div>
+
+        <!-- 🔍 可摺疊陀螺儀診斷面板 (Sensor Diagnostics Bar) -->
+        <div id="diagPanel" class="hidden mt-2 pt-2 border-t border-slate-700/80 bg-slate-950/90 rounded-xl p-2.5 text-[11px] font-mono text-slate-300">
+            <div class="flex items-center justify-between mb-1.5">
+                <span class="font-bold text-amber-300 flex items-center gap-1">🔍 陀螺儀感應器診斷面板 (Sensor Status)</span>
+                <button id="openGuideModalBtn" class="text-[10px] bg-pink-600 hover:bg-pink-500 text-white font-sans font-bold px-2 py-0.5 rounded">
+                    點解用唔到？解決方法
+                </button>
+            </div>
+            <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+                <div>Secure Context (HTTPS): <span id="diagSecure" class="font-bold">--</span></div>
+                <div>In Sandboxed Iframe: <span id="diagIframe" class="font-bold">--</span></div>
+                <div>Orientation API: <span id="diagOrientAPI" class="font-bold">--</span></div>
+                <div>Motion Gravity API: <span id="diagMotionAPI" class="font-bold">--</span></div>
+                <div>iOS Permission API: <span id="diagPermAPI" class="font-bold">--</span></div>
+                <div>Active Source: <span id="diagSource" class="font-bold text-cyan-300">None</span></div>
+                <div class="col-span-2 text-emerald-300 bg-slate-900 px-2 py-1 rounded border border-slate-800 mt-0.5">
+                    Raw Data: <span id="diagRawValues">β: null | γ: null | accX: null | accY: null</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主機台廚窗 Canvas 區域 -->
+    <main class="w-full max-w-lg flex-1 flex flex-col items-center justify-center relative min-h-[340px] sm:min-h-[410px]">
+        <div class="w-full h-full arcade-cabinet rounded-2xl overflow-hidden relative flex flex-col">
+            <!-- 機頂跑馬燈提示 -->
+            <div id="statusBanner" class="bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 text-white text-xs sm:text-sm font-black py-1 px-3 text-center tracking-wide shadow-md z-10 flex items-center justify-between">
+                <span id="bannerMsg" class="truncate mr-2">💡 側側部電話或拖曳左下角搖桿瞄準公仔，撳「落爪」！</span>
+                <span id="accuracyBadge" class="bg-black/40 px-2 py-0.5 rounded text-[11px] text-amber-300 font-mono flex-shrink-0">X:50 Y:50</span>
+            </div>
+
+            <!-- 2.5D 遊戲畫布 (支援直接手指滑動瞄準) -->
+            <div id="canvasTouchZone" class="relative flex-1 w-full bg-slate-950 touch-none-zone cursor-crosshair" style="min-height: 320px;" title="可直接喺畫面拖曳移動爪頭">
+                <canvas id="clawCanvas"></canvas>
+
+                <!-- 浮動訊息 Toast -->
+                <div id="toastOverlay" class="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 z-20">
+                    <div id="toastBox" class="bg-slate-900/95 border-2 border-amber-400 text-amber-300 px-5 py-3 rounded-2xl shadow-2xl text-center transform scale-95 transition-transform duration-300 max-w-[85%]">
+                        <div id="toastEmoji" class="text-4xl mb-1">🎉</div>
+                        <div id="toastTitle" class="text-lg font-black">夾中公仔！</div>
+                        <div id="toastSub" class="text-xs text-slate-300 mt-0.5">+300 分</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 街機控制面板 (陀螺儀水平儀/觸控搖桿 + 大落爪掣 + 虛擬十字掣) -->
+    <section class="w-full max-w-lg arcade-cabinet rounded-2xl p-3 mt-2">
+        <div class="grid grid-cols-12 gap-2 items-center">
+            
+            <!-- 左側：陀螺儀水平氣泡儀 兼 觸控虛擬搖桿 (Bubble Level & Analog Stick) -->
+            <div class="col-span-4 flex flex-col items-center justify-center bg-slate-900/90 border border-slate-700 rounded-xl p-2">
+                <div class="text-[10px] sm:text-[11px] font-bold text-cyan-300 mb-1 flex items-center gap-1 text-center">
+                    <span>🧭 水平儀 / 搖桿</span>
+                </div>
+                <div id="joystickPad" class="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-slate-950 border-2 border-cyan-500/70 shadow-inner flex items-center justify-center overflow-hidden touch-none-zone cursor-pointer" title="可用手指拖曳當搖桿控制爪頭">
+                    <!-- 十字準星線 -->
+                    <div class="absolute inset-x-0 h-[1px] bg-cyan-500/30 pointer-events-none"></div>
+                    <div class="absolute inset-y-0 w-[1px] bg-cyan-500/30 pointer-events-none"></div>
+                    <div class="w-8 h-8 rounded-full border border-cyan-500/40 pointer-events-none"></div>
+                    <!-- 動態水平氣泡 / 搖桿頭 -->
+                    <div id="tiltBubble" class="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-300 to-blue-600 border border-white/70 shadow-[0_0_12px_#22d3ee] absolute pointer-events-none" style="transform: translate(0px, 0px);"></div>
+                </div>
+                <div id="angleReadout" class="text-[10px] font-mono text-slate-400 mt-1 text-center">
+                    可拖曳搖桿或傾側
+                </div>
+            </div>
+
+            <!-- 中間：超大街機「落爪！」按鈕 -->
+            <div class="col-span-4 flex flex-col items-center justify-center">
+                <button id="dropClawBtn" class="btn-drop w-24 h-24 sm:w-28 sm:h-28 rounded-full flex flex-col items-center justify-center text-white border-4 border-pink-300/80 select-none">
+                    <span class="text-2xl sm:text-3xl mb-0.5">🪝</span>
+                    <span class="text-base sm:text-lg font-black tracking-wider leading-none">落爪!</span>
+                    <span class="text-[10px] font-bold text-pink-200 mt-0.5">DROP CLAW</span>
+                </button>
+                <span class="text-[10px] text-slate-400 mt-2 font-medium">每次消耗 1 個銀仔</span>
+            </div>
+
+            <!-- 右側：虛擬十字掣 (D-Pad 支援電腦/無陀螺儀微調) -->
+            <div class="col-span-4 flex flex-col items-center justify-center bg-slate-900/90 border border-slate-700 rounded-xl p-2">
+                <div class="text-[11px] font-bold text-pink-300 mb-1">🕹️ 手動微調掣</div>
+                <div class="grid grid-cols-3 gap-1 w-24 h-24 sm:w-26 sm:h-26">
+                    <div></div>
+                    <button data-dir="up" class="dpad-btn rounded-lg flex items-center justify-center text-sm font-black text-white" aria-label="向後移">▲</button>
+                    <div></div>
+                    <button data-dir="left" class="dpad-btn rounded-lg flex items-center justify-center text-sm font-black text-white" aria-label="向左移">◀</button>
+                    <div class="bg-slate-950 rounded-lg flex items-center justify-center text-[10px] text-slate-500 font-bold">XY</div>
+                    <button data-dir="right" class="dpad-btn rounded-lg flex items-center justify-center text-sm font-black text-white" aria-label="向右移">▶</button>
+                    <div></div>
+                    <button data-dir="down" class="dpad-btn rounded-lg flex items-center justify-center text-sm font-black text-white" aria-label="向前移">▼</button>
+                    <div></div>
+                </div>
+                <div class="text-[10px] text-slate-400 mt-1">支援鍵盤 WASD</div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- 底部：戰利品櫃 (Prize Collection Tray) -->
+    <footer class="w-full max-w-lg arcade-cabinet rounded-2xl p-2.5 sm:p-3 mt-2">
+        <div class="flex items-center justify-between mb-1.5">
+            <div class="flex items-center gap-1.5">
+                <span class="text-base">🏆</span>
+                <h2 class="text-xs sm:text-sm font-black text-amber-300">戰利品櫃 (已夾獲 <span id="caughtCount">0</span> 隻)</h2>
+            </div>
+            <span class="text-[11px] text-slate-400">點擊戰利品可睇詳情</span>
+        </div>
+        <div id="prizeTray" class="flex items-center gap-2 overflow-x-auto py-1.5 px-2 bg-slate-950/90 rounded-xl border border-slate-800 min-h-[54px]">
+            <span id="emptyTrayHint" class="text-xs text-slate-500 italic">暫時仲未夾到公仔，快啲落爪試下啦！</span>
+        </div>
+    </footer>
+
+    <!-- 🛠️ 陀螺儀被 Iframe 攔截 / 無法啟用時嘅廣東話解決方案 Modal -->
+    <div id="sensorBlockedModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-pink-500 rounded-2xl max-w-md w-full p-4 sm:p-5 shadow-2xl text-slate-100">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2.5 mb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">🕵️‍♂️</span>
+                    <h3 class="text-base sm:text-lg font-black text-pink-400">點解啟用唔到陀螺儀？</h3>
+                </div>
+                <button id="closeModalXBtn" class="text-slate-400 hover:text-white text-xl font-bold px-2">✕</button>
+            </div>
+
+            <div class="text-xs sm:text-sm space-y-2.5 text-slate-300 leading-relaxed">
+                <p id="modalReasonText" class="bg-slate-950 border border-amber-500/40 rounded-xl p-2.5 text-amber-200 font-medium">
+                    系統偵測到你目前喺 <strong>預覽視窗 (Sandboxed Iframe)</strong> 入面打開遊戲。為咗安全，瀏覽器預設會封鎖預覽框入面嘅手機陀螺儀訊號！
+                </p>
+
+                <p class="text-xs text-slate-400">
+                    你有以下 <strong>兩個一鍵解決方法</strong>：
+                </p>
+
+                <!-- 方案 1：下載或複製獨立 HTML 喺 Safari / Chrome 玩真・陀螺儀 -->
+                <div class="bg-slate-800/90 border border-cyan-500/40 rounded-xl p-3 space-y-2">
+                    <div class="font-black text-cyan-300 text-xs sm:text-sm">方法 1：喺手機 Safari / Chrome 獨立開啟（支援真・陀螺儀！）</div>
+                    <p class="text-[11px] text-slate-300">
+                        只要下載呢個單一 HTML 檔案（或者喺新分頁開啟），直接用手機瀏覽器打開，就可以 100% 解鎖陀螺儀體感控制：
+                    </p>
+                    <div class="flex flex-wrap gap-2 pt-1">
+                        <button id="downloadHtmlBtn" class="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 active:scale-95 text-white text-xs font-black py-2 px-3 rounded-xl shadow flex items-center justify-center gap-1">
+                            <span>📲</span> 下載獨立 HTML 檔 (.html)
+                        </button>
+                        <button id="copyHtmlBtn" class="bg-slate-700 hover:bg-slate-600 active:scale-95 text-slate-100 text-xs font-bold py-2 px-3 rounded-xl border border-slate-500 flex items-center justify-center gap-1">
+                            <span>📋</span> 複製完整代碼
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 方案 2：即刻喺預覽入面用虛擬搖桿 & 畫面滑動玩 -->
+                <div class="bg-slate-800/90 border border-pink-500/40 rounded-xl p-3 space-y-2">
+                    <div class="font-black text-pink-300 text-xs sm:text-sm">方法 2：留喺呢度即刻用「虛擬搖桿 / 觸控滑動」玩！</div>
+                    <p class="text-[11px] text-slate-300">
+                        唔使跳出視窗！你可以直接用手指拖曳左下角嘅 <strong>「🧭 水平儀搖桿」</strong>，或者直接喺 <strong>公仔機玻璃畫面上滑動</strong> 瞄準落爪！
+                    </p>
+                    <button id="useTouchModeBtn" class="w-full bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 active:scale-95 text-white text-xs font-black py-2.5 px-3 rounded-xl shadow flex items-center justify-center gap-1.5">
+                        <span>🕹️</span> 啟用螢幕虛擬搖桿 / 觸控滑動模式（即刻玩）
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**************************************************************
+         * 1. 街機合成音效引擎 (Web Audio API - 無需外部音訊檔)
+         **************************************************************/
+        class ArcadeSoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playTone(freq, type = 'square', duration = 0.12, vol = 0.12, slideTo = null) {
+                if (!this.enabled) return;
+                try {
+                    this.init();
+                    if (!this.ctx) return;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    if (slideTo) {
+                        osc.frequency.exponentialRampToValueAtTime(slideTo, this.ctx.currentTime + duration);
+                    }
+                    gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) {
+                    // 忽略音訊限制錯誤
+                }
+            }
+
+            coin() {
+                this.playTone(987.77, 'sine', 0.08, 0.15);
+                setTimeout(() => this.playTone(1318.51, 'sine', 0.25, 0.18), 75);
+            }
+
+            dropStart() {
+                this.playTone(520, 'sawtooth', 0.35, 0.1, 180);
+            }
+
+            grabSnap() {
+                this.playTone(240, 'triangle', 0.12, 0.18, 420);
+            }
+
+            slipFail() {
+                this.playTone(300, 'sawtooth', 0.18, 0.14, 140);
+                setTimeout(() => this.playTone(180, 'sawtooth', 0.28, 0.14, 95), 160);
+            }
+
+            winFanfare() {
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((n, idx) => {
+                    setTimeout(() => this.playTone(n, 'square', 0.18, 0.15), idx * 95);
+                });
+            }
+        }
+
+        const sfx = new ArcadeSoundEngine();
+
+        /**************************************************************
+         * 2. 公仔圖鑑設定 (Prizes Catalog)
+         **************************************************************/
+        const PRIZE_CATALOG = [
+            {
+                id: 'shiba',
+                name: '柴犬公仔',
+                emoji: '🐕',
+                score: 250,
+                radius: 11.5,
+                weight: 1.0, // 標準重量
+                color: '#f59e0b',
+                accent: '#fef3c7'
+            },
+            {
+                id: 'neko',
+                name: '招財貓',
+                emoji: '🐱',
+                score: 350,
+                radius: 11.5,
+                weight: 1.1,
+                color: '#f43f5e',
+                accent: '#ffe4e6'
+            },
+            {
+                id: 'dino',
+                name: '恐龍仔',
+                emoji: '🦖',
+                score: 300,
+                radius: 12,
+                weight: 1.05,
+                color: '#10b981',
+                accent: '#d1fae5'
+            },
+            {
+                id: 'robot',
+                name: '閃電機械人',
+                emoji: '🤖',
+                score: 400,
+                radius: 11.5,
+                weight: 1.2,
+                color: '#3b82f6',
+                accent: '#dbeafe'
+            },
+            {
+                id: 'gamepad',
+                name: '街機手掣',
+                emoji: '🎮',
+                score: 450,
+                radius: 11,
+                weight: 1.15,
+                color: '#8b5cf6',
+                accent: '#ede9fe'
+            },
+            {
+                id: 'gold_egg',
+                name: '金色傳說扭蛋',
+                emoji: '✨',
+                score: 800,
+                radius: 10.5,
+                weight: 1.32, // 較滑身但高分
+                color: '#eab308',
+                accent: '#fef08a'
+            }
+        ];
+
+        /**************************************************************
+         * 3. 遊戲狀態與座標系統 (0 - 100 邏輯空間)
+         **************************************************************/
+        const CHUTE_BOX = { xMin: 4, xMax: 28, yMin: 68, yMax: 96, centerX: 16, centerY: 82 };
+
+        const state = {
+            coins: 5,
+            score: 0,
+            caughtPrizes: [],
+
+            // 爪頭 3D 邏輯座標: x(左右 8~92), y(前後深度 10~90), z(高度 0頂 ~ 100底)
+            claw: {
+                x: 54,
+                y: 50,
+                z: 0,
+                phase: 'IDLE', // IDLE | DROPPING | GRABBING | LIFTING | RETURNING | RELEASING
+                openAngle: 0.65, // 0.15(夾緊) ~ 0.75(張開)
+                swingAngle: 0,
+                heldPrize: null,
+                gripStrength: 0,
+                slipHeight: null,
+                waitTimer: 0
+            },
+
+            // 陀螺儀狀態
+            gyro: {
+                enabled: false,
+                hasReceivedEvent: false,
+                source: 'None', // 'DeviceOrientation' | 'DeviceMotion' | 'TouchJoystick'
+                permStatus: '未請求',
+                rawBeta: 0,  // 前後傾角
+                rawGamma: 0, // 左右傾角
+                rawAccX: null,
+                rawAccY: null,
+                baseBeta: 35, // 預設舒適持機斜度 (約35度)
+                baseGamma: 0,
+                tiltX: 0, // 校準後 [-1, 1]
+                tiltY: 0
+            },
+
+            // 虛擬搖桿 (左下角 Analog Stick) 與 畫面觸控狀態
+            joystick: {
+                active: false,
+                joyX: 0, // [-1, 1]
+                joyY: 0  // [-1, 1]
+            },
+
+            // 虛擬十字掣與鍵盤狀態
+            keys: { up: false, down: false, left: false, right: false },
+
+            // 場內公仔與粒子特效
+            prizes: [],
+            particles: []
+        };
+
+        /**************************************************************
+         * 4. 生成場內公仔 (避開左下角出貨口)
+         **************************************************************/
+        function spawnPrizes(count = 11) {
+            state.prizes = [];
+            for (let i = 0; i < count; i++) {
+                const template = PRIZE_CATALOG[i % PRIZE_CATALOG.length];
+                let px = 50, py = 50, valid = false;
+
+                for (let attempt = 0; attempt < 40 && !valid; attempt++) {
+                    px = 15 + Math.random() * 72;
+                    py = 16 + Math.random() * 72;
+
+                    // 避開左下角出貨口 (CHUTE_BOX)
+                    if (px < CHUTE_BOX.xMax + 8 && py > CHUTE_BOX.yMin - 8) continue;
+
+                    // 避免過度重疊
+                    valid = true;
+                    for (const existing of state.prizes) {
+                        const dist = Math.hypot(px - existing.x, py - existing.y);
+                        if (dist < 14.5) {
+                            valid = false;
+                            break;
+                        }
+                    }
+                }
+
+                state.prizes.push({
+                    uid: 'prize_' + Date.now() + '_' + i,
+                    ...template,
+                    x: px,
+                    y: py,
+                    z: 100, // 100 = 地面, 0 = 頂部
+                    bobOffset: Math.random() * Math.PI * 2,
+                    fallingInChute: false
+                });
+            }
+        }
+
+        /**************************************************************
+         * 5. 陀螺儀權限處理、雙重監聽 (Orientation + Motion) & 診斷系統
+         **************************************************************/
+        const enableGyroBtn = document.getElementById('enableGyroBtn');
+        const calibrateBtn = document.getElementById('calibrateBtn');
+        const toggleDiagBtn = document.getElementById('toggleDiagBtn');
+        const diagPanel = document.getElementById('diagPanel');
+        const gyroStatusDot = document.getElementById('gyroStatusDot');
+        const gyroStatusText = document.getElementById('gyroStatusText');
+        const tiltBubble = document.getElementById('tiltBubble');
+        const angleReadout = document.getElementById('angleReadout');
+        const sensorBlockedModal = document.getElementById('sensorBlockedModal');
+
+        const isInIframe = (function () {
+            try { return window.self !== window.top; } catch (e) { return true; }
+        })();
+
+        // 更新診斷面板 UI
+        function refreshDiagnosticsUI() {
+            const isSec = !!window.isSecureContext;
+            const hasOrient = typeof window.DeviceOrientationEvent !== 'undefined';
+            const hasMotion = typeof window.DeviceMotionEvent !== 'undefined';
+            const hasPermFn = (hasOrient && typeof DeviceOrientationEvent.requestPermission === 'function') ||
+                              (hasMotion && typeof DeviceMotionEvent.requestPermission === 'function');
+
+            const secEl = document.getElementById('diagSecure');
+            secEl.textContent = isSec ? 'YES ✅' : 'NO ❌';
+            secEl.className = isSec ? 'font-bold text-emerald-400' : 'font-bold text-rose-400';
+
+            const ifrEl = document.getElementById('diagIframe');
+            ifrEl.textContent = isInIframe ? 'YES ⚠️ (Iframe)' : 'NO ✅ (Top Window)';
+            ifrEl.className = isInIframe ? 'font-bold text-amber-400' : 'font-bold text-emerald-400';
+
+            document.getElementById('diagOrientAPI').textContent = hasOrient ? 'Supported' : 'No';
+            document.getElementById('diagMotionAPI').textContent = hasMotion ? 'Supported' : 'No';
+            document.getElementById('diagPermAPI').textContent = hasPermFn ? `iOS (${state.gyro.permStatus})` : `Auto (${state.gyro.permStatus})`;
+            document.getElementById('diagSource').textContent = state.gyro.source;
+
+            const bStr = state.gyro.hasReceivedEvent ? state.gyro.rawBeta.toFixed(1) : 'null';
+            const gStr = state.gyro.hasReceivedEvent ? state.gyro.rawGamma.toFixed(1) : 'null';
+            const axStr = state.gyro.rawAccX !== null ? state.gyro.rawAccX.toFixed(1) : 'null';
+            const ayStr = state.gyro.rawAccY !== null ? state.gyro.rawAccY.toFixed(1) : 'null';
+            document.getElementById('diagRawValues').textContent = `β:${bStr}° | γ:${gStr}° | accX:${axStr} | accY:${ayStr}`;
+        }
+
+        toggleDiagBtn.addEventListener('click', () => {
+            diagPanel.classList.toggle('hidden');
+            refreshDiagnosticsUI();
+        });
+
+        document.getElementById('openGuideModalBtn').addEventListener('click', () => {
+            openSensorBlockedModal();
+        });
+
+        // 監聽 1: 標準 DeviceOrientationEvent
+        function handleOrientation(event) {
+            if (event.beta === null && event.gamma === null) return;
+            // 部分桌面瀏覽器會派發一次全 0 空事件，過濾無效全零值
+            if (!state.gyro.hasReceivedEvent && event.beta === 0 && event.gamma === 0 && event.alpha === 0) return;
+
+            state.gyro.rawBeta = event.beta || 0;
+            state.gyro.rawGamma = event.gamma || 0;
+            state.gyro.source = 'DeviceOrientation';
+
+            if (!state.gyro.hasReceivedEvent) {
+                state.gyro.hasReceivedEvent = true;
+                state.gyro.enabled = true;
+                calibrateGyroCenter(false);
+                updateGyroUI(true, '陀螺儀已連線 (傾斜手機移動爪頭)');
+            }
+
+            applyGyroAngles();
+            refreshDiagnosticsUI();
+        }
+
+        // 監聽 2: DeviceMotionEvent (accelerationIncludingGravity 重力加速度後備演算法)
+        function handleMotionFallback(event) {
+            const acc = event.accelerationIncludingGravity;
+            if (!acc || (acc.x === null && acc.y === null)) return;
+            if (acc.x === 0 && acc.y === 0 && acc.z === 0) return;
+
+            state.gyro.rawAccX = acc.x || 0;
+            state.gyro.rawAccY = acc.y || 0;
+
+            // 如果標準 Orientation 已經正常運作緊，就淨係記錄數值作診斷
+            if (state.gyro.source === 'DeviceOrientation') {
+                refreshDiagnosticsUI();
+                return;
+            }
+
+            // 由重力加速度換算手機左右傾角 (Gamma) 與前後傾角 (Beta)
+            const az = acc.z || -9.8;
+            const computedGamma = Math.atan2(-acc.x, Math.hypot(acc.y, az)) * (180 / Math.PI);
+            const computedBeta = Math.atan2(-acc.y, -az) * (180 / Math.PI);
+
+            state.gyro.rawGamma = computedGamma;
+            state.gyro.rawBeta = computedBeta;
+            state.gyro.source = 'DeviceMotion (Gravity)';
+
+            if (!state.gyro.hasReceivedEvent) {
+                state.gyro.hasReceivedEvent = true;
+                state.gyro.enabled = true;
+                calibrateGyroCenter(false);
+                updateGyroUI(true, '重力感應已連線 (傾斜手機移動爪頭)');
+            }
+
+            applyGyroAngles();
+            refreshDiagnosticsUI();
+        }
+
+        function applyGyroAngles() {
+            const maxAngle = 22;
+            const dGamma = state.gyro.rawGamma - state.gyro.baseGamma;
+            const dBeta = state.gyro.rawBeta - state.gyro.baseBeta;
+
+            state.gyro.tiltX = Math.max(-1, Math.min(1, dGamma / maxAngle));
+            state.gyro.tiltY = Math.max(-1, Math.min(1, dBeta / maxAngle));
+        }
+
+        function updateGyroUI(active, customMsg = null) {
+            if (active) {
+                gyroStatusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
+                gyroStatusText.textContent = customMsg || '陀螺儀已連線 (傾斜手機移動爪頭)';
+                gyroStatusText.className = 'text-xs font-bold text-emerald-300';
+                enableGyroBtn.innerHTML = '<span>✅</span> 體感運作中';
+                enableGyroBtn.className = 'bg-emerald-600/80 text-white text-xs font-black px-2.5 py-1.5 rounded-lg shadow flex items-center gap-1';
+            }
+        }
+
+        function openSensorBlockedModal(customReasonHtml = null) {
+            if (customReasonHtml) {
+                document.getElementById('modalReasonText').innerHTML = customReasonHtml;
+            } else if (isInIframe) {
+                document.getElementById('modalReasonText').innerHTML =
+                    `系統偵測到呢個網頁而家喺 <strong>預覽沙盒視窗 (Sandboxed Iframe)</strong> 入面運行緊。瀏覽器嘅安全策略 (Permissions-Policy) 會攔截預覽框入面嘅陀螺儀訊號！`;
+            } else if (!window.isSecureContext) {
+                document.getElementById('modalReasonText').innerHTML =
+                    `系統偵測到目前唔係 <strong>HTTPS 安全連線</strong>，現代手機瀏覽器規定必須喺 HTTPS 或者獨立檔案下先可以讀取陀螺儀。`;
+            }
+            diagPanel.classList.remove('hidden');
+            refreshDiagnosticsUI();
+            sensorBlockedModal.classList.remove('hidden');
+            sensorBlockedModal.classList.add('flex');
+        }
+
+        function closeSensorBlockedModal() {
+            sensorBlockedModal.classList.add('hidden');
+            sensorBlockedModal.classList.remove('flex');
+        }
+
+        document.getElementById('closeModalXBtn').addEventListener('click', closeSensorBlockedModal);
+
+        // 啟動陀螺儀主流程 (包含 iOS 權限申請 + 1.2 秒自動無訊號偵測)
+        async function requestGyroPermission() {
+            sfx.init();
+            state.gyro.permStatus = '請求中...';
+            refreshDiagnosticsUI();
+
+            let granted = true;
+
+            try {
+                // iOS 13+ Orientation Permission
+                if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    const res1 = await DeviceOrientationEvent.requestPermission();
+                    granted = (res1 === 'granted');
+                    state.gyro.permStatus = res1;
+                }
+                // iOS 13+ Motion Permission
+                if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                    try {
+                        const res2 = await DeviceMotionEvent.requestPermission();
+                        if (res2 === 'granted') granted = true;
+                    } catch (_) {}
+                }
+            } catch (err) {
+                granted = false;
+                state.gyro.permStatus = '被 Iframe/系統攔截';
+                refreshDiagnosticsUI();
+                openSensorBlockedModal(
+                    `⚠️ <strong>瀏覽器拒絕咗陀螺儀權限請求 (${err.name || 'SecurityError'})</strong>。<br>原因通常係你喺 <strong>App 預覽視窗 (Iframe)</strong> 入面撳掣，iOS / Android 唔允許內嵌框架要求體感權限。`
+                );
+                return;
+            }
+
+            if (!granted) {
+                refreshDiagnosticsUI();
+                openSensorBlockedModal(
+                    `⚠️ <strong>未獲得陀螺儀權限</strong>。如果喺 Safari 入面不小心撳咗拒絕，需要關閉分頁重開，或者直接使用下面嘅「虛擬搖桿模式」即刻玩！`
+                );
+                return;
+            }
+
+            if (state.gyro.permStatus === '請求中...') {
+                state.gyro.permStatus = '已掛載監聽';
+            }
+
+            // 同時註冊 Orientation 同 Motion 雙重監聽器
+            window.addEventListener('deviceorientation', handleOrientation, true);
+            window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+            window.addEventListener('devicemotion', handleMotionFallback, true);
+            refreshDiagnosticsUI();
+
+            showToast('⏳', '正在偵測手機陀螺儀...', '請輕輕前後左右傾側一下部電話');
+
+            // 1.2 秒後檢查係咪因為 Sandboxed Iframe 或電腦環境而完全收唔到任何數據
+            setTimeout(() => {
+                refreshDiagnosticsUI();
+                if (state.gyro.hasReceivedEvent) {
+                    showToast('📱', '陀螺儀成功連線！', '側側部電話即可控制天車前後左右移動');
+                } else {
+                    state.gyro.permStatus = isInIframe ? '被 Iframe 封鎖 (Null)' : '無感應器訊號';
+                    refreshDiagnosticsUI();
+                    openSensorBlockedModal();
+                }
+            }, 1200);
+        }
+
+        function calibrateGyroCenter(notify = true) {
+            state.gyro.baseBeta = state.gyro.rawBeta;
+            state.gyro.baseGamma = state.gyro.rawGamma;
+            state.gyro.tiltX = 0;
+            state.gyro.tiltY = 0;
+            state.joystick.joyX = 0;
+            state.joystick.joyY = 0;
+            if (notify) {
+                sfx.coin();
+                showToast('🎯', '水平已重新校準！', '目前握持電話嘅角度已設為中心點 (0,0)');
+            }
+        }
+
+        enableGyroBtn.addEventListener('click', requestGyroPermission);
+        calibrateBtn.addEventListener('click', () => calibrateGyroCenter(true));
+
+        /**************************************************************
+         * 5B. 解決方案 Modal 按鈕功能：一鍵下載獨立 HTML / 複製代碼 / 切換觸控搖桿模式
+         **************************************************************/
+        document.getElementById('downloadHtmlBtn').addEventListener('click', () => {
+            try {
+                const fullHtml = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+                const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'gyro_claw_machine.html';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 5000);
+                showToast('📲', '已開始下載 HTML 檔！', '下載後用 Safari 或 Chrome 打開即可啟用真・陀螺儀');
+            } catch (e) {
+                showToast('⚠️', '下載受限', '請撳旁邊「📋 複製完整代碼」貼去記事本儲存為 .html');
+            }
+        });
+
+        document.getElementById('copyHtmlBtn').addEventListener('click', () => {
+            const fullHtml = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+            const textarea = document.createElement('textarea');
+            textarea.value = fullHtml;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast('📋', '已複製完整 HTML 代碼！', '可貼上儲存為 .html 檔案再用手機瀏覽器開啟');
+            } catch (err) {
+                showToast('⚠️', '複製失敗', '你可以直接喺右邊代碼編輯器複製');
+            }
+            document.body.removeChild(textarea);
+        });
+
+        document.getElementById('useTouchModeBtn').addEventListener('click', () => {
+            closeSensorBlockedModal();
+            state.gyro.source = 'TouchJoystick';
+            gyroStatusDot.className = 'w-2.5 h-2.5 rounded-full bg-cyan-400';
+            gyroStatusText.textContent = '虛擬搖桿 & 畫面觸控滑動模式運作中';
+            gyroStatusText.className = 'text-xs font-bold text-cyan-300';
+            refreshDiagnosticsUI();
+            sfx.coin();
+            showToast('🕹️', '虛擬搖桿 & 觸控模式已就緒！', '拖曳左下角搖桿或直接喺公仔機畫面滑動即可瞄準！');
+        });
+
+        /**************************************************************
+         * 6. 左下角「二合一觸控虛擬搖桿」+ 機台畫面直接滑動瞄準 + 十字掣
+         **************************************************************/
+        const joystickPad = document.getElementById('joystickPad');
+
+        function handleJoystickMove(clientX, clientY) {
+            const rect = joystickPad.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const maxRadius = rect.width * 0.42;
+
+            const dx = clientX - centerX;
+            const dy = clientY - centerY;
+            const dist = Math.hypot(dx, dy);
+            const clampedDist = Math.min(dist, maxRadius);
+            const angle = Math.atan2(dy, dx);
+
+            state.joystick.joyX = (Math.cos(angle) * clampedDist) / maxRadius;
+            state.joystick.joyY = (Math.sin(angle) * clampedDist) / maxRadius;
+            state.gyro.source = 'TouchJoystick';
+        }
+
+        joystickPad.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            sfx.init();
+            state.joystick.active = true;
+            joystickPad.setPointerCapture(e.pointerId);
+            handleJoystickMove(e.clientX, e.clientY);
+        });
+
+        joystickPad.addEventListener('pointermove', (e) => {
+            if (!state.joystick.active) return;
+            e.preventDefault();
+            handleJoystickMove(e.clientX, e.clientY);
+        });
+
+        const releaseJoystick = () => {
+            state.joystick.active = false;
+            state.joystick.joyX = 0;
+            state.joystick.joyY = 0;
+        };
+        joystickPad.addEventListener('pointerup', releaseJoystick);
+        joystickPad.addEventListener('pointercancel', releaseJoystick);
+
+        // 支援直接喺公仔機玻璃畫面 (Canvas) 上面用手指拖曳移動爪頭
+        const canvasTouchZone = document.getElementById('canvasTouchZone');
+        let canvasDragging = false;
+        let lastDragX = 0;
+        let lastDragY = 0;
+
+        canvasTouchZone.addEventListener('pointerdown', (e) => {
+            if (state.claw.phase !== 'IDLE') return;
+            sfx.init();
+            canvasDragging = true;
+            lastDragX = e.clientX;
+            lastDragY = e.clientY;
+            canvasTouchZone.setPointerCapture(e.pointerId);
+        });
+
+        canvasTouchZone.addEventListener('pointermove', (e) => {
+            if (!canvasDragging || state.claw.phase !== 'IDLE') return;
+            const dx = e.clientX - lastDragX;
+            const dy = e.clientY - lastDragY;
+            lastDragX = e.clientX;
+            lastDragY = e.clientY;
+
+            const rect = canvasTouchZone.getBoundingClientRect();
+            state.claw.x = Math.max(10, Math.min(90, state.claw.x + (dx / rect.width) * 115));
+            state.claw.y = Math.max(12, Math.min(90, state.claw.y + (dy / rect.height) * 115));
+            state.claw.swingAngle = Math.max(-0.22, Math.min(0.22, dx * 0.015));
+        });
+
+        const stopCanvasDrag = () => { canvasDragging = false; };
+        canvasTouchZone.addEventListener('pointerup', stopCanvasDrag);
+        canvasTouchZone.addEventListener('pointercancel', stopCanvasDrag);
+
+        // 右下角虛擬十字掣 & 鍵盤控制支援
+        document.querySelectorAll('.dpad-btn').forEach(btn => {
+            const dir = btn.dataset.dir;
+            const startPress = (e) => {
+                e.preventDefault();
+                sfx.init();
+                state.keys[dir] = true;
+                btn.classList.add('active');
+            };
+            const endPress = (e) => {
+                e.preventDefault();
+                state.keys[dir] = false;
+                btn.classList.remove('active');
+            };
+            btn.addEventListener('mousedown', startPress);
+            btn.addEventListener('mouseup', endPress);
+            btn.addEventListener('mouseleave', endPress);
+            btn.addEventListener('touchstart', startPress, { passive: false });
+            btn.addEventListener('touchend', endPress, { passive: false });
+        });
+
+        window.addEventListener('keydown', (e) => {
+            const k = e.key.toLowerCase();
+            if (k === 'arrowup' || k === 'w') state.keys.up = true;
+            if (k === 'arrowdown' || k === 's') state.keys.down = true;
+            if (k === 'arrowleft' || k === 'a') state.keys.left = true;
+            if (k === 'arrowright' || k === 'd') state.keys.right = true;
+            if (k === ' ' || k === 'enter') {
+                e.preventDefault();
+                triggerDropClaw();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const k = e.key.toLowerCase();
+            if (k === 'arrowup' || k === 'w') state.keys.up = false;
+            if (k === 'arrowdown' || k === 's') state.keys.down = false;
+            if (k === 'arrowleft' || k === 'a') state.keys.left = false;
+            if (k === 'arrowright' || k === 'd') state.keys.right = false;
+        });
+
+        /**************************************************************
+         * 7. 遊戲互動按鈕 (入銀仔、落爪、補貨、音效)
+         **************************************************************/
+        const coinCountEl = document.getElementById('coinCount');
+        const scoreCountEl = document.getElementById('scoreCount');
+        const dropClawBtn = document.getElementById('dropClawBtn');
+        const bannerMsg = document.getElementById('bannerMsg');
+        const accuracyBadge = document.getElementById('accuracyBadge');
+
+        function updateHeaderStats() {
+            coinCountEl.textContent = state.coins;
+            scoreCountEl.textContent = state.score;
+            dropClawBtn.disabled = (state.claw.phase !== 'IDLE');
+        }
+
+        document.getElementById('insertCoinBtn').addEventListener('click', () => {
+            state.coins += 3;
+            sfx.coin();
+            updateHeaderStats();
+            showToast('🪙', '成功入銀仔 +3！', `而家共有 ${state.coins} 個銀仔可以夾公仔`);
+        });
+
+        document.getElementById('refillBtn').addEventListener('click', () => {
+            if (state.claw.phase !== 'IDLE') return;
+            sfx.coin();
+            spawnPrizes(11);
+            showToast('🔄', '店員已補滿新公仔！', '快啲瞄準金色傳說扭蛋同柴犬啦');
+        });
+
+        document.getElementById('soundToggleBtn').addEventListener('click', (e) => {
+            sfx.enabled = !sfx.enabled;
+            e.currentTarget.textContent = sfx.enabled ? '🔊' : '🔇';
+        });
+
+        function triggerDropClaw() {
+            if (state.claw.phase !== 'IDLE') return;
+
+            if (state.coins <= 0) {
+                sfx.slipFail();
+                showToast('🪙', '唔夠銀仔呀！', '撳右上角「+入銀仔」免費拎銀仔繼續夾！');
+                return;
+            }
+
+            // 檢查係咪直接喺出貨口正上方落爪
+            if (state.claw.x < CHUTE_BOX.xMax && state.claw.y > CHUTE_BOX.yMin) {
+                showToast('⚠️', '呢度係出貨口窿位！', '請將爪頭移去右邊公仔區先好落爪');
+                return;
+            }
+
+            state.coins -= 1;
+            state.claw.phase = 'DROPPING';
+            state.claw.openAngle = 0.75; // 大張開落爪
+            sfx.dropStart();
+            bannerMsg.textContent = '⏬ 落爪中... 祈禱夾正中間！';
+            updateHeaderStats();
+        }
+
+        dropClawBtn.addEventListener('click', triggerDropClaw);
+
+        /**************************************************************
+         * 8. 浮動提示與戰利品櫃更新
+         **************************************************************/
+        let toastTimer = null;
+        function showToast(emoji, title, sub) {
+            const overlay = document.getElementById('toastOverlay');
+            const box = document.getElementById('toastBox');
+            document.getElementById('toastEmoji').textContent = emoji;
+            document.getElementById('toastTitle').textContent = title;
+            document.getElementById('toastSub').textContent = sub;
+
+            overlay.classList.remove('opacity-0');
+            box.classList.remove('scale-95');
+            box.classList.add('scale-100');
+
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                overlay.classList.add('opacity-0');
+                box.classList.remove('scale-100');
+                box.classList.add('scale-95');
+            }, 2100);
+        }
+
+        function addPrizeToCollection(prize) {
+            state.caughtPrizes.unshift(prize);
+            document.getElementById('caughtCount').textContent = state.caughtPrizes.length;
+            const tray = document.getElementById('prizeTray');
+            const emptyHint = document.getElementById('emptyTrayHint');
+            if (emptyHint) emptyHint.remove();
+
+            const item = document.createElement('button');
+            item.className = 'flex-shrink-0 flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 border border-pink-500/50 rounded-xl px-2.5 py-1 transition transform hover:scale-105';
+            item.innerHTML = `
+                <span class="text-2xl">${prize.emoji}</span>
+                <div class="text-left">
+                    <div class="text-xs font-black text-white leading-tight">${prize.name}</div>
+                    <div class="text-[10px] font-bold text-amber-400">+${prize.score}分</div>
+                </div>
+            `;
+            item.addEventListener('click', () => {
+                showToast(prize.emoji, prize.name, `價值 ${prize.score} 分嘅精選戰利品！`);
+            });
+            tray.prepend(item);
+        }
+
+        function spawnConfetti(x, y) {
+            const colors = ['#f472b6', '#22d3ee', '#facc15', '#4ade80', '#a78bfa'];
+            for (let i = 0; i < 38; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 1.5 + Math.random() * 5.5;
+                state.particles.push({
+                    x,
+                    y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 2.5,
+                    size: 4 + Math.random() * 5,
+                    color: colors[i % colors.length],
+                    life: 1.0
+                });
+            }
+        }
+
+        /**************************************************************
+         * 9. 物理與遊戲狀態機更新 (60fps Loop)
+         **************************************************************/
+        function updateGamePhysics() {
+            const claw = state.claw;
+
+            // 計算目前有效輸入向量 (結合 陀螺儀 + 左下角觸控搖桿 + 右下角十字掣)
+            let inputX = state.gyro.enabled ? state.gyro.tiltX : 0;
+            let inputY = state.gyro.enabled ? state.gyro.tiltY : 0;
+
+            // 若玩家正拖曳左下角虛擬搖桿，優先採用搖桿訊號
+            if (state.joystick.active) {
+                inputX = state.joystick.joyX;
+                inputY = state.joystick.joyY;
+            }
+
+            if (state.keys.left) inputX = -0.85;
+            if (state.keys.right) inputX = 0.85;
+            if (state.keys.up) inputY = -0.85;
+            if (state.keys.down) inputY = 0.85;
+
+            // 更新左下角水平儀 / 搖桿氣泡位置
+            const maxBubbleOffset = 28;
+            const bx = Math.round(inputX * maxBubbleOffset);
+            const by = Math.round(inputY * maxBubbleOffset);
+            tiltBubble.style.transform = `translate(${bx}px, ${by}px)`;
+            const degX = Math.round(inputX * 22);
+            const degY = Math.round(inputY * 22);
+            angleReadout.textContent = `X: ${degX}° | Y: ${degY}°`;
+
+            // 狀態機處理
+            switch (claw.phase) {
+                case 'IDLE': {
+                    // 根據傾斜量平滑移動爪頭 X(左右) 同 Y(前後深度)
+                    const speed = 0.85;
+                    if (Math.abs(inputX) > 0.06 || Math.abs(inputY) > 0.06) {
+                        claw.x = Math.max(10, Math.min(90, claw.x + inputX * speed));
+                        claw.y = Math.max(12, Math.min(90, claw.y + inputY * speed));
+                        claw.swingAngle = inputX * 0.16;
+                    } else {
+                        claw.swingAngle *= 0.85;
+                    }
+                    accuracyBadge.textContent = `X:${Math.round(claw.x)} Y:${Math.round(claw.y)}`;
+                    break;
+                }
+
+                case 'DROPPING': {
+                    claw.z += 1.85;
+                    claw.swingAngle *= 0.9;
+                    if (claw.z >= 96) {
+                        claw.z = 96;
+                        claw.phase = 'GRABBING';
+                        claw.waitTimer = 26;
+                        sfx.grabSnap();
+                        evaluatePrizeGrab();
+                    }
+                    break;
+                }
+
+                case 'GRABBING': {
+                    // 收緊爪臂動畫
+                    claw.openAngle = Math.max(0.22, claw.openAngle - 0.035);
+                    claw.waitTimer--;
+                    if (claw.waitTimer <= 0) {
+                        claw.phase = 'LIFTING';
+                        bannerMsg.textContent = claw.heldPrize
+                            ? `⏫ 夾起咗【${claw.heldPrize.name}】！頂住呀！`
+                            : '⏫ 哎呀，抓空咗...';
+                    }
+                    break;
+                }
+
+                case 'LIFTING': {
+                    claw.z -= 1.45;
+                    if (claw.heldPrize) {
+                        claw.heldPrize.x = claw.x;
+                        claw.heldPrize.y = claw.y;
+                        claw.heldPrize.z = claw.z + 4;
+
+                        // 如果抓得唔夠正中，上升半空有機會鬆爪跌返落去 (真實街機體驗)
+                        if (claw.slipHeight !== null && claw.z <= claw.slipHeight) {
+                            const dropped = claw.heldPrize;
+                            dropped.z = 100;
+                            // 隨機彈開少少
+                            dropped.x = Math.max(32, Math.min(88, dropped.x + (Math.random() - 0.5) * 8));
+                            dropped.y = Math.max(16, Math.min(88, dropped.y + (Math.random() - 0.5) * 8));
+                            claw.heldPrize = null;
+                            claw.slipHeight = null;
+                            claw.openAngle = 0.58;
+                            sfx.slipFail();
+                            bannerMsg.textContent = `😱 爭少少！【${dropped.name}】半空跣爪跌咗！`;
+                            showToast('😱', '半空跣爪跌返落去！', '下次對準公仔正中心陰影，夾實率會高達 95%！');
+                        }
+                    }
+
+                    if (claw.z <= 0) {
+                        claw.z = 0;
+                        claw.phase = 'RETURNING';
+                        bannerMsg.textContent = '⬅️ 天車移緊去左下角出貨口...';
+                    }
+                    break;
+                }
+
+                case 'RETURNING': {
+                    // 自動移返去左下角出貨口中心 (CHUTE_BOX.centerX, CHUTE_BOX.centerY)
+                    const dx = CHUTE_BOX.centerX - claw.x;
+                    const dy = CHUTE_BOX.centerY - claw.y;
+                    const dist = Math.hypot(dx, dy);
+
+                    if (dist < 1.6) {
+                        claw.x = CHUTE_BOX.centerX;
+                        claw.y = CHUTE_BOX.centerY;
+                        claw.phase = 'RELEASING';
+                        claw.waitTimer = 38;
+                    } else {
+                        const moveSpeed = 1.35;
+                        claw.x += (dx / dist) * moveSpeed;
+                        claw.y += (dy / dist) * moveSpeed;
+                        if (claw.heldPrize) {
+                            claw.heldPrize.x = claw.x;
+                            claw.heldPrize.y = claw.y;
+                            claw.heldPrize.z = claw.z + 4;
+                        }
+                    }
+                    break;
+                }
+
+                case 'RELEASING': {
+                    claw.openAngle = Math.min(0.72, claw.openAngle + 0.04);
+                    if (claw.heldPrize) {
+                        const wonPrize = claw.heldPrize;
+                        claw.heldPrize = null;
+
+                        // 移除場內公仔並計分
+                        state.prizes = state.prizes.filter(p => p.uid !== wonPrize.uid);
+                        state.score += wonPrize.score;
+                        sfx.winFanfare();
+                        addPrizeToCollection(wonPrize);
+
+                        // 觸發彩紙粒子特效
+                        const canvas = document.getElementById('clawCanvas');
+                        spawnConfetti(canvas.width * 0.22, canvas.height * 0.72);
+
+                        showToast(wonPrize.emoji, `夾中【${wonPrize.name}】！`, `恭喜晒！獲得 +${wonPrize.score} 分`);
+                        bannerMsg.textContent = `🎉 夾中【${wonPrize.name}】！繼續挑戰下一隻！`;
+
+                        // 若果場內公仔少過 3 隻，自動補貨
+                        if (state.prizes.length < 3) {
+                            setTimeout(() => spawnPrizes(10), 1200);
+                        }
+                    }
+
+                    claw.waitTimer--;
+                    if (claw.waitTimer <= 0) {
+                        claw.phase = 'IDLE';
+                        claw.openAngle = 0.62;
+                        if (bannerMsg.textContent.startsWith('⬅️') || bannerMsg.textContent.startsWith('⏫')) {
+                            bannerMsg.textContent = '💡 瞄準公仔正下方嘅十字光圈陰影，再撳「落爪！」';
+                        }
+                        updateHeaderStats();
+                    }
+                    break;
+                }
+            }
+
+            // 更新慶祝彩紙粒子
+            for (let i = state.particles.length - 1; i >= 0; i--) {
+                const pt = state.particles[i];
+                pt.x += pt.vx;
+                pt.y += pt.vy;
+                pt.vy += 0.18; // 重力
+                pt.life -= 0.02;
+                if (pt.life <= 0) state.particles.splice(i, 1);
+            }
+        }
+
+        // 判定落爪有冇夾中公仔同埋會唔會半空鬆爪
+        function evaluatePrizeGrab() {
+            const claw = state.claw;
+            let closest = null;
+            let minDist = Infinity;
+
+            for (const p of state.prizes) {
+                const d = Math.hypot(p.x - claw.x, p.y - claw.y);
+                if (d < minDist) {
+                    minDist = d;
+                    closest = p;
+                }
+            }
+
+            // 抓取有效半徑 12.5 邏輯單位
+            const maxGrabRadius = 12.5;
+            if (closest && minDist <= maxGrabRadius) {
+                claw.heldPrize = closest;
+                // 準繩度 0.0 (邊緣) ~ 1.0 (正中紅心)
+                const accuracy = 1 - (minDist / maxGrabRadius);
+                // 綜合成功機率：愈正中愈穩陣
+                const holdChance = Math.min(0.96, (0.32 + accuracy * 0.78) / closest.weight);
+
+                if (Math.random() <= holdChance) {
+                    claw.slipHeight = null; // 穩陣夾到返出貨口
+                } else {
+                    // 半空隨機高度 (Z = 25 ~ 68) 跣爪
+                    claw.slipHeight = 25 + Math.random() * 43;
+                }
+            } else {
+                claw.heldPrize = null;
+                claw.slipHeight = null;
+            }
+        }
+
+        /**************************************************************
+         * 10. 2.5D 街機機台透視繪圖引擎 + 頂視小雷達
+         **************************************************************/
+        const canvas = document.getElementById('clawCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        /**
+         * 將邏輯 3D 座標 (x:0-100, y:0-100, z:0頂-100底) 投影成 2.5D 街機透視畫面座標
+         */
+        function project3D(x, y, z, w, h) {
+            const depthRatio = y / 100; // 0 (機背遠端) -> 1 (機前玻璃近端)
+
+            // 地板梯形邊界設定
+            const floorBackY = h * 0.44;
+            const floorFrontY = h * 0.89;
+            const ceilingBackY = h * 0.08;
+            const ceilingFrontY = h * 0.22;
+
+            // 近大遠小寬度縮放 (機背窄 66%，機前闊 92%)
+            const halfWidthBack = w * 0.33;
+            const halfWidthFront = w * 0.46;
+            const currentHalfWidth = halfWidthBack + (halfWidthFront - halfWidthBack) * depthRatio;
+            const scale = 0.72 + 0.34 * depthRatio;
+
+            const centerX = w * 0.5;
+            const screenX = centerX + ((x - 50) / 50) * currentHalfWidth;
+
+            const floorY = floorBackY + (floorFrontY - floorBackY) * depthRatio;
+            const ceilingY = ceilingBackY + (ceilingFrontY - ceilingBackY) * depthRatio;
+            const screenY = ceilingY + (floorY - ceilingY) * (z / 100);
+
+            return { screenX, screenY, floorY, ceilingY, scale };
+        }
+
+        function renderCabinet() {
+            const w = canvas.width;
+            const h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            // 1. 機台內部霓虹漸層背景
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+            bgGrad.addColorStop(0, '#090d16');
+            bgGrad.addColorStop(0.5, '#1e1b4b');
+            bgGrad.addColorStop(1, '#0f172a');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, w, h);
+
+            // 2. 繪製 2.5D 機箱內部立體框線與深度格線 (令玩家清晰判斷前後 Y 深度)
+            const backTL = project3D(0, 0, 0, w, h);
+            const backTR = project3D(100, 0, 0, w, h);
+            const backBL = project3D(0, 0, 100, w, h);
+            const backBR = project3D(100, 0, 100, w, h);
+            const frontBL = project3D(0, 100, 100, w, h);
+            const frontBR = project3D(100, 100, 100, w, h);
+
+            // 機背牆身
+            ctx.fillStyle = 'rgba(30, 27, 75, 0.55)';
+            ctx.beginPath();
+            ctx.moveTo(backTL.screenX, backTL.screenY);
+            ctx.lineTo(backTR.screenX, backTR.screenY);
+            ctx.lineTo(backBR.screenX, backBR.screenY);
+            ctx.lineTo(backBL.screenX, backBL.screenY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(244, 114, 182, 0.3)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // 機底獎品台地板
+            const floorGrad = ctx.createLinearGradient(0, backBL.screenY, 0, frontBL.screenY);
+            floorGrad.addColorStop(0, '#1e293b');
+            floorGrad.addColorStop(1, '#0f172a');
+            ctx.fillStyle = floorGrad;
+            ctx.beginPath();
+            ctx.moveTo(backBL.screenX, backBL.screenY);
+            ctx.lineTo(backBR.screenX, backBR.screenY);
+            ctx.lineTo(frontBR.screenX, frontBR.screenY);
+            ctx.lineTo(frontBL.screenX, frontBL.screenY);
+            ctx.closePath();
+            ctx.fill();
+
+            // 地板透視網格線 (X 與 Y 座標對照線)
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.18)';
+            ctx.lineWidth = 1;
+            for (let gx = 0; gx <= 100; gx += 20) {
+                const pStart = project3D(gx, 0, 100, w, h);
+                const pEnd = project3D(gx, 100, 100, w, h);
+                ctx.beginPath();
+                ctx.moveTo(pStart.screenX, pStart.screenY);
+                ctx.lineTo(pEnd.screenX, pEnd.screenY);
+                ctx.stroke();
+            }
+            for (let gy = 0; gy <= 100; gy += 20) {
+                const pLeft = project3D(0, gy, 100, w, h);
+                const pRight = project3D(100, gy, 100, w, h);
+                ctx.beginPath();
+                ctx.moveTo(pLeft.screenX, pLeft.screenY);
+                ctx.lineTo(pRight.screenX, pRight.screenY);
+                ctx.stroke();
+            }
+
+            // 3. 左下角「出貨口」(Drop Chute) 立體護欄與洞口
+            const c1 = project3D(CHUTE_BOX.xMin, CHUTE_BOX.yMin, 100, w, h);
+            const c2 = project3D(CHUTE_BOX.xMax, CHUTE_BOX.yMin, 100, w, h);
+            const c3 = project3D(CHUTE_BOX.xMax, CHUTE_BOX.yMax, 100, w, h);
+            const c4 = project3D(CHUTE_BOX.xMin, CHUTE_BOX.yMax, 100, w, h);
+
+            ctx.fillStyle = '#020617';
+            ctx.beginPath();
+            ctx.moveTo(c1.screenX, c1.screenY);
+            ctx.lineTo(c2.screenX, c2.screenY);
+            ctx.lineTo(c3.screenX, c3.screenY);
+            ctx.lineTo(c4.screenX, c4.screenY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = '#f43f5e';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+
+            // 出貨口文字標示
+            const chuteCenter = project3D(CHUTE_BOX.centerX, CHUTE_BOX.centerY, 100, w, h);
+            ctx.fillStyle = '#fb7185';
+            ctx.font = '900 11px "Noto Sans TC", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('⬇ 出貨口 CHUTE', chuteCenter.screenX, chuteCenter.screenY + 4);
+
+            // 4. 繪製爪頭正下方地面「雷射瞄準十字光圈」(幫助玩家對準 X, Y 深度)
+            const clawShadow = project3D(state.claw.x, state.claw.y, 100, w, h);
+            const pulse = 1 + Math.sin(Date.now() * 0.008) * 0.1;
+            const aimRadius = 20 * clawShadow.scale * pulse;
+
+            // 檢查目前係咪對準緊某隻公仔
+            let targetedPrize = null;
+            for (const p of state.prizes) {
+                if (Math.hypot(p.x - state.claw.x, p.y - state.claw.y) < 11.5) {
+                    targetedPrize = p;
+                    break;
+                }
+            }
+
+            ctx.save();
+            ctx.translate(clawShadow.screenX, clawShadow.screenY);
+            ctx.scale(1, 0.55); // 壓扁成地面透視橢圓
+            ctx.beginPath();
+            ctx.arc(0, 0, aimRadius, 0, Math.PI * 2);
+            ctx.fillStyle = targetedPrize ? 'rgba(74, 222, 128, 0.28)' : 'rgba(34, 211, 238, 0.2)';
+            ctx.fill();
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = targetedPrize ? '#4ade80' : '#22d3ee';
+            ctx.stroke();
+
+            // 十字準星
+            ctx.beginPath();
+            ctx.moveTo(-aimRadius * 1.3, 0);
+            ctx.lineTo(aimRadius * 1.3, 0);
+            ctx.moveTo(0, -aimRadius * 1.3);
+            ctx.lineTo(0, aimRadius * 1.3);
+            ctx.stroke();
+            ctx.restore();
+
+            // 5. 依 Y 深度排序繪製場內公仔 (由遠到近，確保正確遮擋關係)
+            const sortedPrizes = [...state.prizes].sort((a, b) => a.y - b.y);
+            for (const prize of sortedPrizes) {
+                drawPrizeItem(prize, w, h, targetedPrize && targetedPrize.uid === prize.uid);
+            }
+
+            // 6. 繪製天車橫樑 (Gantry Rail) 與機械爪
+            drawClawAndGantry(w, h);
+
+            // 7. 繪製右上角「頂視雷達小地圖 (Top-Down Radar)」方便精準睇 X-Y 平面位置
+            drawMiniTopDownRadar(w, h);
+
+            // 8. 繪製慶祝粒子
+            for (const pt of state.particles) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, pt.life);
+                ctx.fillStyle = pt.color;
+                ctx.fillRect(pt.x, pt.y, pt.size, pt.size);
+                ctx.restore();
+            }
+        }
+
+        function drawPrizeItem(prize, w, h, isTargeted) {
+            const proj = project3D(prize.x, prize.y, prize.z, w, h);
+            const floorProj = project3D(prize.x, prize.y, 100, w, h);
+            const r = 19 * proj.scale;
+
+            // 公仔地面陰影
+            ctx.save();
+            ctx.translate(floorProj.screenX, floorProj.screenY);
+            ctx.scale(1, 0.5);
+            ctx.beginPath();
+            ctx.arc(0, 0, r * 0.95, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+            ctx.fill();
+            ctx.restore();
+
+            // 公仔本體扭蛋/圓潤球體底托
+            ctx.save();
+            ctx.translate(proj.screenX, proj.screenY - r * 0.55);
+
+            // 鎖定目標時發光外框
+            if (isTargeted && state.claw.phase === 'IDLE') {
+                ctx.beginPath();
+                ctx.arc(0, 0, r * 1.18, 0, Math.PI * 2);
+                ctx.strokeStyle = '#4ade80';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+            }
+
+            const sphereGrad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.2, 0, 0, r);
+            sphereGrad.addColorStop(0, prize.accent);
+            sphereGrad.addColorStop(0.55, prize.color);
+            sphereGrad.addColorStop(1, '#0f172a');
+
+            ctx.beginPath();
+            ctx.arc(0, 0, r, 0, Math.PI * 2);
+            ctx.fillStyle = sphereGrad;
+            ctx.fill();
+            ctx.lineWidth = 1.8;
+            ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+            ctx.stroke();
+
+            // 公仔 Emoji 圖案
+            ctx.font = `${Math.round(r * 1.15)}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(prize.emoji, 0, 1);
+
+            // 分數小標籤
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+            ctx.beginPath();
+            ctx.roundRect(-18 * proj.scale, r * 0.65, 36 * proj.scale, 13 * proj.scale, 4);
+            ctx.fill();
+            ctx.fillStyle = '#fde047';
+            ctx.font = `900 ${Math.round(9.5 * proj.scale)}px "Noto Sans TC", sans-serif`;
+            ctx.fillText(`${prize.score}`, 0, r * 0.65 + 7 * proj.scale);
+
+            ctx.restore();
+        }
+
+        function drawClawAndGantry(w, h) {
+            const claw = state.claw;
+            const railLeft = project3D(0, claw.y, 0, w, h);
+            const railRight = project3D(100, claw.y, 0, w, h);
+            const ceilingPos = project3D(claw.x, claw.y, 0, w, h);
+            const clawPos = project3D(claw.x, claw.y, claw.z, w, h);
+            const floorPos = project3D(claw.x, claw.y, 100, w, h);
+
+            // 1. 天車橫向滑軌 (隨 Y 深度前後移動)
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 5 * ceilingPos.scale;
+            ctx.beginPath();
+            ctx.moveTo(railLeft.screenX, railLeft.screenY);
+            ctx.lineTo(railRight.screenX, railRight.screenY);
+            ctx.stroke();
+
+            // 2. 垂直雷射輔助虛線 (由爪頭直射落地面陰影中心)
+            ctx.save();
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = 'rgba(34, 211, 238, 0.45)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(clawPos.screenX, clawPos.screenY);
+            ctx.lineTo(floorPos.screenX, floorPos.screenY);
+            ctx.stroke();
+            ctx.restore();
+
+            // 3. 天車滑輪盒
+            ctx.fillStyle = '#f472b6';
+            const boxW = 26 * ceilingPos.scale;
+            const boxH = 12 * ceilingPos.scale;
+            ctx.fillRect(ceilingPos.screenX - boxW / 2, ceilingPos.screenY - boxH / 2, boxW, boxH);
+
+            // 4. 鋼纜繩 (由天車盒連到爪頭)
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(ceilingPos.screenX, ceilingPos.screenY);
+            ctx.lineTo(clawPos.screenX, clawPos.screenY - 14 * clawPos.scale);
+            ctx.stroke();
+
+            // 5. 機械爪本體與左右爪臂
+            ctx.save();
+            ctx.translate(clawPos.screenX, clawPos.screenY - 12 * clawPos.scale);
+            ctx.rotate(claw.swingAngle);
+
+            const s = clawPos.scale;
+
+            // 爪頭馬達頂蓋
+            ctx.fillStyle = '#ec4899';
+            ctx.beginPath();
+            ctx.arc(0, 0, 10 * s, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // 左爪臂
+            ctx.save();
+            ctx.rotate(claw.openAngle);
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 3.5 * s;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(-4 * s, 4 * s);
+            ctx.lineTo(-18 * s, 18 * s);
+            ctx.lineTo(-10 * s, 30 * s);
+            ctx.stroke();
+            ctx.restore();
+
+            // 右爪臂
+            ctx.save();
+            ctx.rotate(-claw.openAngle);
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 3.5 * s;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(4 * s, 4 * s);
+            ctx.lineTo(18 * s, 18 * s);
+            ctx.lineTo(10 * s, 30 * s);
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.restore();
+        }
+
+        // 右上角「頂視雷達 (Top-Down Radar)」：直觀顯示 X-Y 平面位置
+        function drawMiniTopDownRadar(w, h) {
+            const size = Math.min(86, w * 0.22);
+            const pad = 10;
+            const rx = w - size - pad;
+            const ry = pad;
+
+            ctx.save();
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+            ctx.strokeStyle = 'rgba(34, 211, 238, 0.7)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.roundRect(rx, ry, size, size, 8);
+            ctx.fill();
+            ctx.stroke();
+
+            // 標題
+            ctx.fillStyle = '#67e8f9';
+            ctx.font = 'bold 9px "Noto Sans TC", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('頂視雷達 (XY)', rx + 5, ry + 11);
+
+            const mapArea = size - 16;
+            const ox = rx + 8;
+            const oy = ry + 14;
+
+            // 出貨口區域
+            ctx.fillStyle = 'rgba(244, 63, 94, 0.35)';
+            ctx.strokeStyle = '#f43f5e';
+            ctx.lineWidth = 1;
+            const cx = ox + (CHUTE_BOX.xMin / 100) * mapArea;
+            const cy = oy + (CHUTE_BOX.yMin / 100) * mapArea;
+            const cw = ((CHUTE_BOX.xMax - CHUTE_BOX.xMin) / 100) * mapArea;
+            const ch = ((CHUTE_BOX.yMax - CHUTE_BOX.yMin) / 100) * mapArea;
+            ctx.fillRect(cx, cy, cw, ch);
+            ctx.strokeRect(cx, cy, cw, ch);
+
+            // 公仔點位
+            for (const p of state.prizes) {
+                const px = ox + (p.x / 100) * mapArea;
+                const py = oy + (p.y / 100) * mapArea;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(px, py, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 爪頭準星位置
+            const clawX = ox + (state.claw.x / 100) * mapArea;
+            const clawY = oy + (state.claw.y / 100) * mapArea;
+            ctx.strokeStyle = '#22d3ee';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(clawX, clawY, 4.5, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(clawX - 7, clawY);
+            ctx.lineTo(clawX + 7, clawY);
+            ctx.moveTo(clawX, clawY - 7);
+            ctx.lineTo(clawX, clawY + 7);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        /**************************************************************
+         * 11. 啟動遊戲主迴圈
+         **************************************************************/
+        function gameLoop() {
+            updateGamePhysics();
+            renderCabinet();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = function () {
+            resizeCanvas();
+            spawnPrizes(11);
+            updateHeaderStats();
+            refreshDiagnosticsUI();
+            gameLoop();
+        };
+    </script>
+</body>
+</html>
